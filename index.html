@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Newton's Cradle Simulation</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            overflow: hidden;
+            background-color: #0f0f0f;
+            /* Even darker for premium feel */
+            color: #ececec;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            touch-action: none;
+        }
+
+        canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        .header {
+            position: absolute;
+            top: 40px;
+            text-align: center;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        h1 {
+            font-weight: 200;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+            font-size: 2rem;
+            margin-bottom: 5px;
+            color: #fff;
+        }
+
+        .instructions {
+            font-size: 0.8em;
+            opacity: 0.5;
+            letter-spacing: 1px;
+        }
+
+        .settings-panel {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            background: rgba(20, 20, 20, 0.8);
+            padding: 24px;
+            border-radius: 16px;
+            pointer-events: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            width: 240px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .label-text {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .value-text {
+            font-size: 0.9rem;
+            font-family: monospace;
+            color: #007aff;
+            /* Accent color */
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            background: #007aff;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.1s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Mobile Layout */
+        @media (max-width: 768px) {
+            .header {
+                top: 20px;
+            }
+
+            h1 {
+                font-size: 1.4rem;
+            }
+
+            .settings-panel {
+                top: auto;
+                bottom: 30px;
+                right: 20px;
+                left: 20px;
+                width: auto;
+                padding: 16px;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+
+            .control-group {
+                flex: 1 1 calc(50% - 12px);
+                min-width: 120px;
+            }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+</head>
+
+<body>
+
+    <div class="header">
+        <h1>Newton's Cradle</h1>
+        <p class="instructions">DRAG A BALL TO BEGIN</p>
+    </div>
+
+    <div class="settings-panel">
+        <div class="control-group">
+            <div class="label-row">
+                <span class="label-text">Gravity</span>
+                <span id="gravity-val" class="value-text">1.0</span>
+            </div>
+            <input type="range" id="gravity" min="0" max="3" step="0.1" value="1">
+        </div>
+        <div class="control-group">
+            <div class="label-row">
+                <span class="label-text">Length</span>
+                <span id="length-val" class="value-text">200</span>
+            </div>
+            <input type="range" id="length" min="100" max="400" step="10" value="200">
+        </div>
+        <div class="control-group">
+            <div class="label-row">
+                <span class="label-text">Balls</span>
+                <span id="count-val" class="value-text">5</span>
+            </div>
+            <input type="range" id="count" min="3" max="10" step="1" value="5">
+        </div>
+    </div>
+
+    <script>
+        const Engine = Matter.Engine,
+            Render = Matter.Render,
+            Runner = Matter.Runner,
+            Body = Matter.Body,
+            Composites = Matter.Composites,
+            MouseConstraint = Matter.MouseConstraint,
+            Mouse = Matter.Mouse,
+            World = Matter.World,
+            Events = Matter.Events,
+            Query = Matter.Query,
+            Composite = Matter.Composite;
+
+        const engine = Engine.create();
+        const world = engine.world;
+
+        // Use a container size but handle window properly
+        const getContainerSize = () => ({
+            width: window.innerWidth,
+            height: window.innerHeight
+        });
+
+        const render = Render.create({
+            element: document.body,
+            engine: engine,
+            options: {
+                width: window.innerWidth,
+                height: window.innerHeight,
+                wireframes: false,
+                background: 'transparent', // CSS handles background
+                pixelRatio: 1 // Keep 1:1 for perfect mouse alignment
+            }
+        });
+
+        Render.run(render);
+        const runner = Runner.create();
+        Runner.run(runner, engine);
+
+        let cradle;
+
+        function createCradle() {
+            if (cradle) Composite.remove(world, cradle);
+
+            const number = parseInt(document.getElementById('count').value);
+            const length = parseInt(document.getElementById('length').value);
+            const size = 30;
+
+            // Re-fetch width just in case of resize edge cases
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            // startX is the start of the suspension beam points
+            // center = width / 2
+            // beam width = (number - 1) * size
+            // beam start = center - (beam width / 2)
+            const startX = (width / 2) - ((number - 1) * size) / 2;
+            const startY = height * 0.25; // Relative position (25% from top)
+
+            cradle = Composites.newtonsCradle(startX, startY, number, size, length);
+
+            cradle.bodies.forEach(body => {
+                // Polished metallic look with gradients if possible, but Matter.js Render is simple.
+                // We use high contrast for premium feel.
+                body.render.fillStyle = '#f0f0f0';
+                body.render.strokeStyle = '#333';
+                body.render.lineWidth = 1;
+
+                body.restitution = 1;
+                body.friction = 0;
+                body.frictionAir = 0.0001;
+                body.slop = 0.1; // Reduced slop for tighter collisions
+            });
+
+            cradle.constraints.forEach(constraint => {
+                constraint.render.strokeStyle = 'rgba(255,255,255,0.15)';
+                constraint.render.lineWidth = 1;
+            });
+
+            World.add(world, cradle);
+        }
+
+        createCradle();
+
+        const mouse = Mouse.create(render.canvas);
+        const mouseConstraint = MouseConstraint.create(engine, {
+            mouse: mouse,
+            constraint: {
+                stiffness: 0.2,
+                render: { visible: false }
+            }
+        });
+
+        World.add(world, mouseConstraint);
+        render.mouse = mouse;
+
+        // Interactive cursor
+        Events.on(mouseConstraint, 'mousemove', (event) => {
+            if (cradle) {
+                const found = Query.point(cradle.bodies, event.mouse.position);
+                document.body.style.cursor = found.length > 0 ? 'grab' : 'default';
+            }
+        });
+
+        Events.on(mouseConstraint, 'startdrag', () => {
+            document.body.style.cursor = 'grabbing';
+        });
+
+        Events.on(mouseConstraint, 'enddrag', () => {
+            document.body.style.cursor = 'grab';
+        });
+
+        // Event Listeners
+        document.getElementById('gravity').addEventListener('input', function () {
+            const val = parseFloat(this.value);
+            engine.gravity.y = val;
+            document.getElementById('gravity-val').textContent = val.toFixed(1);
+        });
+
+        document.getElementById('length').addEventListener('input', function () {
+            document.getElementById('length-val').textContent = this.value;
+            createCradle();
+        });
+
+        document.getElementById('count').addEventListener('input', function () {
+            document.getElementById('count-val').textContent = this.value;
+            createCradle();
+        });
+
+        window.addEventListener('resize', () => {
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            render.canvas.width = w;
+            render.canvas.height = h;
+            render.options.width = w;
+            render.options.height = h;
+            createCradle(); // Re-center and re-position
+        });
+
+    </script>
+</body>
+
+</html>
