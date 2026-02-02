@@ -34,7 +34,7 @@
 
         .header {
             position: absolute;
-            top: 40px;
+            top: 10%;
             text-align: center;
             pointer-events: none;
             z-index: 10;
@@ -57,26 +57,30 @@
 
         .settings-panel {
             position: absolute;
-            top: 40px;
-            right: 40px;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
             background: rgba(20, 20, 20, 0.8);
-            padding: 24px;
+            padding: 20px 30px;
             border-radius: 16px;
             pointer-events: auto;
             display: flex;
-            flex-direction: column;
-            gap: 20px;
+            flex-direction: row;
+            gap: 40px;
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             z-index: 100;
-            width: 240px;
+            width: auto;
+            min-width: 600px;
+            justify-content: center;
         }
 
         .control-group {
             display: flex;
             flex-direction: column;
             gap: 8px;
+            width: 180px;
         }
 
         .label-row {
@@ -102,6 +106,7 @@
 
         input[type="range"] {
             -webkit-appearance: none;
+            appearance: none;
             width: 100%;
             height: 4px;
             background: #333;
@@ -126,28 +131,25 @@
         /* Mobile Layout */
         @media (max-width: 768px) {
             .header {
-                top: 20px;
+                top: 5%;
             }
 
             h1 {
-                font-size: 1.4rem;
+                font-size: 1.2rem;
             }
 
             .settings-panel {
-                top: auto;
-                bottom: 30px;
-                right: 20px;
-                left: 20px;
-                width: auto;
-                padding: 16px;
-                flex-direction: row;
+                bottom: 20px;
+                width: 90%;
+                min-width: unset;
+                padding: 15px;
                 flex-wrap: wrap;
-                gap: 12px;
+                gap: 15px;
             }
 
             .control-group {
-                flex: 1 1 calc(50% - 12px);
-                min-width: 120px;
+                width: 100%;
+                flex: 1 1 100%;
             }
         }
     </style>
@@ -183,6 +185,25 @@
             </div>
             <input type="range" id="count" min="3" max="10" step="1" value="5">
         </div>
+        <button id="reset-btn" style="
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            height: 50px; /* Match other controls height approx */
+            align-self: flex-end; /* Align with inputs */
+            margin-bottom: 5px;
+            transition: all 0.2s ease;
+        " onmouseover="this.style.background='rgba(255, 255, 255, 0.2)'"
+            onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'">
+            Reset
+        </button>
     </div>
 
     <script>
@@ -201,12 +222,6 @@
         const engine = Engine.create();
         const world = engine.world;
 
-        // Use a container size but handle window properly
-        const getContainerSize = () => ({
-            width: window.innerWidth,
-            height: window.innerHeight
-        });
-
         const render = Render.create({
             element: document.body,
             engine: engine,
@@ -214,8 +229,8 @@
                 width: window.innerWidth,
                 height: window.innerHeight,
                 wireframes: false,
-                background: 'transparent', // CSS handles background
-                pixelRatio: 1 // Keep 1:1 for perfect mouse alignment
+                background: 'transparent',
+                pixelRatio: 1
             }
         });
 
@@ -230,37 +245,43 @@
 
             const number = parseInt(document.getElementById('count').value);
             const length = parseInt(document.getElementById('length').value);
-            const size = 30;
 
-            // Re-fetch width just in case of resize edge cases
-            const width = window.innerWidth;
-            const height = window.innerHeight;
+            const w = window.innerWidth;
+            const h = window.innerHeight;
 
-            // startX is the start of the suspension beam points
-            // center = width / 2
-            // beam width = (number - 1) * size
-            // beam start = center - (beam width / 2)
-            const startX = (width / 2) - ((number - 1) * size) / 2;
-            const startY = height * 0.25; // Relative position (25% from top)
+            // Dynamic Sizing Logic
+            const maxAvailableWidth = w * 0.9;
+            const calculatedSize = (maxAvailableWidth / (number * 2.5)); // Increased divisor for more spacing buffer
+            const size = Math.min(30, calculatedSize);
+
+            // Centering logic
+            // newtonsCradle creates bodies. Total width needs estimation.
+            // Spacing is diameter (size * 2).
+            const spacing = size * 2;
+            const startX = (w / 2) - ((number - 1) * spacing) / 2;
+
+            const startY = h * 0.3; // 30% from top
 
             cradle = Composites.newtonsCradle(startX, startY, number, size, length);
 
             cradle.bodies.forEach(body => {
-                // Polished metallic look with gradients if possible, but Matter.js Render is simple.
-                // We use high contrast for premium feel.
+                // Polished metallic look
                 body.render.fillStyle = '#f0f0f0';
                 body.render.strokeStyle = '#333';
                 body.render.lineWidth = 1;
 
-                body.restitution = 1;
+                // Realistic Physics for Steel Balls
+                body.density = 0.04; // Heavier (Steel)
+                body.restitution = 1; // Elastic collision
                 body.friction = 0;
-                body.frictionAir = 0.0001;
-                body.slop = 0.1; // Reduced slop for tighter collisions
+                body.frictionAir = 0.0001; // Low air resistance
+                body.slop = 0.05; // Prevent overlapping
             });
 
             cradle.constraints.forEach(constraint => {
                 constraint.render.strokeStyle = 'rgba(255,255,255,0.15)';
                 constraint.render.lineWidth = 1;
+                constraint.stiffness = 1; // Rigid strings
             });
 
             World.add(world, cradle);
@@ -272,7 +293,9 @@
         const mouseConstraint = MouseConstraint.create(engine, {
             mouse: mouse,
             constraint: {
-                stiffness: 0.2,
+                // Stiff constraint effectively "locks" the ball to the mouse cursor
+                stiffness: 1,
+                angularStiffness: 1,
                 render: { visible: false }
             }
         });
@@ -280,7 +303,6 @@
         World.add(world, mouseConstraint);
         render.mouse = mouse;
 
-        // Interactive cursor
         Events.on(mouseConstraint, 'mousemove', (event) => {
             if (cradle) {
                 const found = Query.point(cradle.bodies, event.mouse.position);
@@ -296,7 +318,6 @@
             document.body.style.cursor = 'grab';
         });
 
-        // Event Listeners
         document.getElementById('gravity').addEventListener('input', function () {
             const val = parseFloat(this.value);
             engine.gravity.y = val;
@@ -313,6 +334,21 @@
             createCradle();
         });
 
+        // Reset functionality
+        document.getElementById('reset-btn').addEventListener('click', function () {
+            document.getElementById('gravity').value = 1.0;
+            document.getElementById('gravity-val').textContent = '1.0';
+            engine.gravity.y = 1.0;
+
+            document.getElementById('length').value = 200;
+            document.getElementById('length-val').textContent = '200';
+
+            document.getElementById('count').value = 5;
+            document.getElementById('count-val').textContent = '5';
+
+            createCradle();
+        });
+
         window.addEventListener('resize', () => {
             const w = window.innerWidth;
             const h = window.innerHeight;
@@ -320,9 +356,8 @@
             render.canvas.height = h;
             render.options.width = w;
             render.options.height = h;
-            createCradle(); // Re-center and re-position
+            createCradle();
         });
-
     </script>
 </body>
 
