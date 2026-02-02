@@ -132,43 +132,24 @@
         @media (max-width: 768px) {
             .header {
                 top: 5%;
-                width: 100%;
-                padding: 0 20px;
             }
 
             h1 {
-                font-size: 1.5rem;
-                /* Slightly larger for readability */
-                margin-bottom: 2px;
-            }
-
-            .instructions {
-                font-size: 0.7em;
+                font-size: 1.2rem;
             }
 
             .settings-panel {
                 bottom: 20px;
-                width: 95%;
+                width: 90%;
                 min-width: unset;
                 padding: 15px;
-
-                /* Grid Layout for Compactness */
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                /* 2 Columns */
-                gap: 12px;
+                flex-wrap: wrap;
+                gap: 15px;
             }
 
             .control-group {
-                width: auto;
-                flex: unset;
-            }
-
-            /* Reset button spans full width or fits nicely */
-            #reset-btn {
-                grid-column: span 2;
-                height: 40px;
-                margin-top: 5px;
+                width: 100%;
+                flex: 1 1 100%;
             }
         }
     </style>
@@ -195,14 +176,14 @@
                 <span class="label-text">Length</span>
                 <span id="length-val" class="value-text">200</span>
             </div>
-            <input type="range" id="length" min="50" max="300" step="10" value="200">
+            <input type="range" id="length" min="100" max="400" step="10" value="200">
         </div>
         <div class="control-group">
             <div class="label-row">
                 <span class="label-text">Balls</span>
                 <span id="count-val" class="value-text">5</span>
             </div>
-            <input type="range" id="count" min="3" max="8" step="1" value="5">
+            <input type="range" id="count" min="3" max="10" step="1" value="5">
         </div>
         <button id="reset-btn" style="
             background: rgba(255, 255, 255, 0.1);
@@ -215,11 +196,10 @@
             font-size: 0.8rem;
             text-transform: uppercase;
             letter-spacing: 1px;
-            /* height: 50px; Removed fixed height for flexibility */
+            height: 50px; /* Match other controls height approx */
             align-self: flex-end; /* Align with inputs */
             margin-bottom: 5px;
             transition: all 0.2s ease;
-            width: 100%; /* Full width in grid cell */
         " onmouseover="this.style.background='rgba(255, 255, 255, 0.2)'"
             onmouseout="this.style.background='rgba(255, 255, 255, 0.1)'">
             Reset
@@ -250,7 +230,7 @@
                 height: window.innerHeight,
                 wireframes: false,
                 background: 'transparent',
-                pixelRatio: window.devicePixelRatio // Better resolution on mobile
+                pixelRatio: 1
             }
         });
 
@@ -268,23 +248,21 @@
 
             const w = window.innerWidth;
             const h = window.innerHeight;
-            const isMobile = w < 768;
 
             // Dynamic Sizing Logic
-            // Scale ball size based on width
-            const maxAvailableWidth = w * (isMobile ? 0.8 : 0.9);
-            const calculatedSize = (maxAvailableWidth / (number * 2.5));
-            const size = Math.min(isMobile ? 25 : 30, calculatedSize); // Smaller balls on mobile
+            const maxAvailableWidth = w * 0.9;
+            const calculatedSize = (maxAvailableWidth / (number * 2.5)); // Increased divisor for more spacing buffer
+            const size = Math.min(30, calculatedSize);
 
             // Centering logic
+            // newtonsCradle creates bodies. Total width needs estimation.
+            // Spacing is diameter (size * 2).
             const spacing = size * 2;
             const startX = (w / 2) - ((number - 1) * spacing) / 2;
 
-            // Positioning: Move up on mobile to reduce gap from title and avoid UI overlap
-            const startY = h * (isMobile ? 0.2 : 0.3);
+            const startY = h * 0.3; // 30% from top
 
             cradle = Composites.newtonsCradle(startX, startY, number, size, length);
-
 
             cradle.bodies.forEach(body => {
                 // Polished metallic look
@@ -383,8 +361,4 @@
     </script>
 </body>
 
-<<<<<<< HEAD
 </html>
-=======
-</html>
->>>>>>> e744856 (Initial commit)
