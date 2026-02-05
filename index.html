@@ -23,6 +23,8 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
+            height: 100dvh;
+            /* iOS Safari fix */
             touch-action: none;
         }
 
@@ -128,6 +130,14 @@
             transform: scale(1.2);
         }
 
+        /* Touch-friendly slider for mobile */
+        @media (max-width: 768px) {
+            input[type="range"]::-webkit-slider-thumb {
+                width: 24px;
+                height: 24px;
+            }
+        }
+
         /* Mobile Layout */
         @media (max-width: 768px) {
             .header {
@@ -167,7 +177,8 @@
             /* Reset button spans full width or fits nicely */
             #reset-btn {
                 grid-column: span 2;
-                height: 40px;
+                height: 44px;
+                /* Minimum touch target */
                 margin-top: 5px;
             }
         }
@@ -383,8 +394,4 @@
     </script>
 </body>
 
-<<<<<<< HEAD
 </html>
-=======
-</html>
->>>>>>> e744856 (Initial commit)
